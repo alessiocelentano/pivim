@@ -1,0 +1,23 @@
+{
+  "name": "pivim",
+  "version": "1.0.0",
+  "description": "Vim modal editing for the Pi AI agent",
+  "keywords": [
+    "pi-package",
+    "vim",
+    "modal-editor",
+    "editor"
+  ],
+  "license": "MIT",
+  "author": "Alessio Celentano",
+  "pi": {
+    "extensions": [
+      "./extensions/pivim.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.79.3",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  }
+}

@@ -1,0 +1,311 @@
+PIVIM(1)                    Agent Extensions                    PIVIM(1)
+
+NAME
+       pivim — Vim modal editor extension for Pi
+
+DESCRIPTION
+       pivim  is  a  Neovim-inspired  modal  editor  that  replaces  Pi's
+       default editor with a Vi-like  interface.  It  provides  modes,  an
+       operator-motion  grammar,  macros,  registers,  visual  selection, a
+       command line, and a status bar widget.
+
+MODES
+       The editor operates in four modes:
+
+       INSERT (default on session start)
+            Characters typed are inserted into the buffer. Escape  returns
+            to NORMAL mode.
+
+       NORMAL
+            Commands  navigate  and  manipulate  text.  This  is the anchor
+            mode.
+
+       VISUAL
+            Text is selected  by  extending  cursor  motion.  Press  v  to
+            enter character-visual, V for line-visual. Escape deselects.
+
+       COMMAND
+            Entered  by  pressing  : in NORMAL mode. Commands are executed
+            on Enter; Escape aborts.
+
+NORMAL MODE COMMANDS
+   Cursor motions
+       h, j, k, l    Left, down, up, right (with count prefix)
+
+   Word motions
+       w, W          Forward to next word start.  W  uses  whitespace  as
+                     word separator.
+
+       b, B          Backward to previous word start.
+
+       e, E          Forward to end of word (inclusive). E uses whitespace
+                     as word separator.
+
+       Neovim  semantics:  empty  lines  act  as  word  boundaries;  cw/CW
+       becomes ce/CE when the cursor is on a word character.
+
+   Line motions
+       0             Jump to column 0.
+
+       ^             First non-blank character on the line.
+
+       $             End of line (inclusive, one step left of last char).
+
+       _             First non-blank, count lines down (like Neovim).
+
+   Page and screen
+       Ctrl-F, Ctrl-B
+                     Page down, page up.
+
+       Ctrl-D, Ctrl-U
+                     Half-page down, half-page up (approximate).
+
+       H, M, L       Jump to top, middle, bottom of visible screen. H  and
+                     L accept a count to offset from the edge.
+
+       zt, zz, zb   Scroll so cursor is at top, center, or bottom of
+                     visible area (also z., z-).
+
+   Paragraph motions
+       {, }          Jump to previous/next paragraph  (blank  line).  Neo‐
+                     vim findpar semantics: passes through non-blank lines
+                     then stops at the blank line. Cursor ends at column 0.
+
+   Bracket matching
+       %             Jump to matching bracket (( ) [ ] { } < >).  If  cur‐
+                     sor  is not on a bracket, scans forward on the cur‐
+                     rent line to find one, then matches it.
+
+   Jump to line
+       G             Jump to last line (with count: jump to that line).
+
+       gg            Jump to first line (with count: jump to that line).
+
+   Screen scroll
+       z<CR>, zt     Scroll cursor to top of screen.
+
+       z., zz        Scroll cursor to center of screen.
+
+       zb, z-        Scroll cursor to bottom of screen.
+
+   Character search motions
+       f{char}       Forward to next occurrence of char (inclusive).
+
+       F{char}       Backward to previous occurrence (inclusive).
+
+       t{char}       Forward to just before next occurrence.
+
+       T{char}       Backward to just after previous occurrence.
+
+   Operators
+       These operators prefix a motion or text object to act on a range:
+
+       d             Delete the range.
+
+       c             Delete the range and enter INSERT mode.
+
+       y             Yank (copy) the range into the unnamed register.
+
+       >             Indent the range (insert 4 spaces).
+
+       <             Outdent the range (remove up to 4 spaces).
+
+       Double-tap  an  operator (dd, cc, yy, >>, <<) to act on the entire
+       current line (count repeats the line).
+
+   Linewise commands (count-aware)
+       dd            Delete count lines.
+
+       cc            Delete count lines and enter INSERT mode.
+
+       yy or Y       Yank count lines (Neovim: Y = yy).
+
+       >>            Indent count lines.
+
+       <<            Outdent count lines.
+
+   Self-contained commands
+       x             Delete the character under the cursor  (count  re‐
+                     peats).
+
+       X             Delete the character before the cursor  (count  re‐
+                     peats).
+
+       D             Delete from cursor to end of line.
+
+       C             Delete from cursor to end of line and  enter  INSERT
+                     mode (like c$).
+
+       s             Substitute count characters (cl) and enter INSERT.
+
+       S             Substitute count lines (cc) and enter INSERT.
+
+       r{char}       Replace  count  characters  with  the given char (no
+                     INSERT mode).
+
+       J             Join line below with current line (count:  join  N-1
+                     lines).  Inserts  one  space  if  the  current  line
+                     doesn't end in whitespace.
+
+   Insertion commands (enter INSERT mode)
+       i             Insert before cursor.
+
+       I             Insert at first non-blank of the line.
+
+       a             Insert after cursor.
+
+       A             Insert at end of the line.
+
+       o             Open a new line below and insert.
+
+       O             Open a new line above and insert.
+
+   Undo / Redo
+       u             Undo the last change (count repeats).
+
+       Ctrl-R        Redo the last undone change (count repeats).
+
+   Put (paste)
+       p             Put yanked/deleted text after cursor.
+
+       P             Put before cursor.
+
+       Linewise registers are inserted on a new line; charwise  registers
+       are inserted inline.
+
+   Search
+       /{pattern}    Search  forward.  Type  the  pattern,  then  Enter.
+                     (Search is entered via the command line.)
+
+       ?{pattern}    Search backward.
+
+       n             Repeat last search in same direction.
+
+       N             Repeat last search in opposite direction.
+
+       *             Search forward for the word under the cursor.
+
+       #             Search backward for the word under the cursor.
+
+   Text objects (after an operator)
+       iw            Inner word (excludes surrounding whitespace).
+
+       aw            A word (includes surrounding whitespace).
+
+       i(, i), ib    Inner parentheses block.
+
+       a(, a), ab    A parentheses block (includes brackets).
+
+       i{, i}, iB    Inner curly-brace block.
+
+       a{, a}, aB    A curly-brace block.
+
+       i[, i]        Inner square-bracket block.
+
+       a[, a]        A square-bracket block.
+
+       i<, i>        Inner angle-bracket block.
+
+       a<, a>        An angle-bracket block.
+
+       i", a"        Inner / a double-quoted string.
+
+       i', a'        Inner / a single-quoted string.
+
+       i`, a`        Inner / a backtick-quoted string.
+
+       Range includes the type  modifiers  for  block  matching:  (,  ),
+       {,  },  [,  ], <, >, b (parentheses), B (braces) are all accepted
+       as the second key.
+
+   Registers
+       "{reg}        Prefix an operator (d, c, y, p, P) with  "a  …  "z
+                     to  store/retrieve  from  a  named  register.  (Cur‐
+                     rently registers are stored but  yank/put  only  uses
+                     the unnamed register.)
+
+   Macros
+       q{reg}        Start recording keystrokes into register {reg}.  All
+                     subsequent  NORMAL-mode  keys  are  captured.   Press
+                     q again to stop recording.
+
+       @{reg}        Play back the macro stored in register {reg}.
+
+       Recording  state  is  displayed  in  the  status  bar  as  a  red
+       ● Rec @{reg} indicator.
+
+   Repeat last change
+       .             Repeat the last editing  operation  (supports  line‐
+                     wise, char-range, visual, and simple operations).
+
+   Visual mode
+       v             Start character-wise visual selection.  Motions  ex‐
+                     tend  the  selection.  Press  v again to return to
+                     NORMAL mode.
+
+       V             Start line-wise visual selection.  Press  V  again
+                     to return to NORMAL mode.
+
+       In visual mode, the following operators act on the selection:
+            d or x    Delete selection and return to NORMAL.
+            c         Delete selection and enter INSERT.
+            y         Yank selection and return to NORMAL.
+            >         Indent selected lines.
+            <         Outdent selected lines.
+
+       Text objects (i/a) can also extend a visual selection.
+
+       gv            (Not yet implemented — re-selects last visual area.)
+
+COMMAND MODE
+       :w            Save the current buffer state to ~/.pi_vim_save.json
+                     for later resume.
+
+       :wq, :x       Save and exit the editor process.
+
+       :q            Exit the editor (without saving).
+
+       :q!           Force exit the editor.
+
+       :man          Open the pivim man page in less.
+
+       :!{command}   Execute a bash command (sends the command text to Pi
+                     for processing).
+
+       :s/old/new[/flags]
+                     Substitute  text  on  the current line. Flags: g for
+                     global (all occurrences), c for confirm (skipped for
+                     now).
+
+       :%s/old/new[/flags]
+                     Substitute across all lines.
+
+STATUS PERSISTENCE
+       The :w and :wq commands write the current editor text  and  cursor
+       position  to  ~/.pi_vim_save.json.  Pi  can  resume  this state on
+       restart by reading the file (extension-level feature).
+
+INSTALLATION
+       Install pivim with pi:
+
+              pi install /path/to/pivim
+
+       Or via a git repository:
+
+              pi install git:github.com/user/pivim@v1.0.0
+
+       After installation, restart pi and press Escape to enter  NORMAL
+       mode in the editor. The default editor is replaced with pivim.
+
+       To  disable  without  uninstalling,  use  pi config to disable the
+       extension:
+
+              pi config extensions disable pivim
+
+FILES
+       ~/.pi_vim_save.json   Saved editor state for :w persistence.
+
+AUTHOR
+       pivim is part of the Pi ecosystem.
+
+Pi-Agent                        2026-06-15                        PIVIM(1)

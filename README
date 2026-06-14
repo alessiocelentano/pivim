@@ -1,0 +1,9 @@
+PIVIM - Vim modal editor for Pi
+================================
+
+Replaces Pi's default editor with a full Vi-like interface.
+Run :man inside pivim for complete documentation.
+
+Installation:
+pi install git:github.com/alessiocelentano/pivim
+
