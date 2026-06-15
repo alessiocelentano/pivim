@@ -17,7 +17,7 @@ MODES
             to NORMAL mode.
 
        NORMAL
-            Commands  navigate  and  manipulate  text.  This  is the anchor
+            Commands  navigate  and  manipulate  text.  This is the anchor
             mode.
 
        VISUAL
@@ -284,28 +284,5 @@ STATUS PERSISTENCE
        The :w and :wq commands write the current editor text  and  cursor
        position  to  ~/.pi_vim_save.json.  Pi  can  resume  this state on
        restart by reading the file (extension-level feature).
-
-INSTALLATION
-       Install pivim with pi:
-
-              pi install /path/to/pivim
-
-       Or via a git repository:
-
-              pi install git:github.com/user/pivim@v1.0.0
-
-       After installation, restart pi and press Escape to enter  NORMAL
-       mode in the editor. The default editor is replaced with pivim.
-
-       To  disable  without  uninstalling,  use  pi config to disable the
-       extension:
-
-              pi config extensions disable pivim
-
-FILES
-       ~/.pi_vim_save.json   Saved editor state for :w persistence.
-
-AUTHOR
-       pivim is part of the Pi ecosystem.
 
 Pi-Agent                        2026-06-15                        PIVIM(1)
