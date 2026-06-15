@@ -1687,8 +1687,13 @@ class VimEditor extends CustomEditor {
       return;
     }
 
-    // ── Escape (any mode) → NORMAL ──
+    // ── Escape → NORMAL (except when already NORMAL: forward to Pi for interrupt) ──
     if (matchesKey(data, "escape")) {
+      if (this._mode === "NORMAL") {
+        // Forward to Pi so it can interrupt a query-in-progress
+        super.handleInput(data);
+        return;
+      }
       this.mode = "NORMAL";
       return;
     }
