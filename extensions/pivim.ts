@@ -16,7 +16,6 @@
  *   Visual:     v (char), V (line) with d/c/y operators
  *   Commands:   :w save, :wq save+quit, :q quit, :q! quit, :!<cmd> bash,
  *               :s/old/new[/flags] substitute
- *   Search:     / forward, ? backward, n/N repeat, * (word search), # (word search)
  *   Y = yy      (linewise yank, like Neovim)
  *   C = c$      (change to end of line)
  *   s = cl      (substitute char)
@@ -101,6 +100,9 @@ class VimEditor extends CustomEditor {
   private _mode: Mode = "INSERT";
   private _prevMode: Mode = "INSERT";
 
+  /** Public getter for the current vim mode (INSERT, NORMAL, VISUAL, COMMAND). */
+  getMode(): Mode { return this._mode; }
+
   // ── Operator state ──
   private pendingOp: Operator | null = null;
 
@@ -149,10 +151,6 @@ class VimEditor extends CustomEditor {
   private lastVisualEndLine = -1;
   private lastVisualEndCol = -1;
   private lastVisualType: VisualType = "char";
-
-  // ── Search state ──
-  private lastSearchDir: "/" | "?" = "/";
-  private lastSearchPattern = "";
 
   // ── Command-line buffer ──
   commandBuffer = "";
@@ -1500,103 +1498,6 @@ class VimEditor extends CustomEditor {
   }
 
   // ───────────────────────────────────────────────────────────
-  // Search
-  // ───────────────────────────────────────────────────────────
-
-  /** Enter search mode with given direction prefix. */
-
-
-  /** Execute a search for the given pattern. */
-  private doSearch(pattern: string, dir: "/" | "?") {
-    if (!pattern) return;
-    this.lastSearchPattern = pattern;
-    this.lastSearchDir = dir;
-
-    const lines = this.getLines();
-    const curLine = this.getCursorLine0();
-    const curCol = this.getCursorCol0();
-    const forward = dir === "/";
-
-    // Neovim: search wraps around.
-    // Start searching on the current line from the next/prev character.
-    const step = forward ? 1 : -1;
-    let startCol = forward ? curCol + 1 : curCol - 1;
-
-    // First pass: search from cursor position to end/beginning of buffer.
-    for (let l = curLine; forward ? l < lines.length : l >= 0; l += step) {
-      const lineText = lines[l] ?? "";
-      const searchFrom = (l === curLine) ? (forward ? Math.max(0, startCol) : Math.min(startCol, lineText.length - 1)) : (forward ? 0 : lineText.length - 1);
-      const idx = forward
-        ? lineText.indexOf(pattern, searchFrom)
-        : (searchFrom >= 0 ? lineText.lastIndexOf(pattern, searchFrom) : -1);
-      if (idx !== -1) {
-        this.gotoAbs(l, idx);
-        this.syncState();
-        this.tuiRef.requestRender();
-        return;
-      }
-    }
-
-    // Wrap around: search from beginning/end to cursor position.
-    const wrapEnd = forward ? curLine : curLine;
-    for (let l = forward ? 0 : lines.length - 1; forward ? l <= wrapEnd : l >= wrapEnd; l += step) {
-      const lineText = lines[l] ?? "";
-      const idx = forward
-        ? lineText.indexOf(pattern, 0)
-        : lineText.lastIndexOf(pattern, lineText.length - 1);
-      if (idx !== -1) {
-        // On the cursor line, make sure we don't land on the same match or past it.
-        if (l === curLine) {
-          const valid = forward ? idx < curCol : idx > curCol;
-          if (!valid) continue;
-        }
-        this.gotoAbs(l, idx);
-        this.syncState();
-        this.tuiRef.requestRender();
-        return;
-      }
-    }
-    // Not found
-    this.syncState();
-    this.tuiRef.requestRender();
-  }
-
-  /** Repeat last search forward (n) or backward (N). */
-  private repeatSearch(reverse: boolean) {
-    if (!this.lastSearchPattern) return;
-    const dir = reverse
-      ? (this.lastSearchDir === "/" ? "?" as const : "/" as const)
-      : this.lastSearchDir;
-    this.doSearch(this.lastSearchPattern, dir);
-  }
-
-  /** Search for word under cursor (* = forward, # = backward). */
-  private searchWordUnderCursor(dir: "/" | "?") {
-    const lines = this.getLines();
-    const line = this.getCursorLine0();
-    const col = this.getCursorCol0();
-    const curLine = lines[line] ?? "";
-    if (col >= curLine.length) return;
-
-    const isWord = VimEditor.isWordChar;
-    if (!isWord(curLine[col])) return;
-
-    // Find word boundaries
-    let s = col, e = col;
-    while (s > 0 && isWord(curLine[s - 1])) s--;
-    while (e < curLine.length && isWord(curLine[e])) e++;
-
-    const word = curLine.slice(s, e);
-    if (!word) return;
-
-    // Neovim: surround with \< and \> for whole-word search
-    // We'll do simple exact match for now
-    this.lastSearchPattern = word;
-    this.lastSearchDir = dir;
-    this.doSearch(word, dir);
-  }
-
-  // ───────────────────────────────────────────────────────────
   // Substitute command: :s/pattern/replacement/flags
   // ───────────────────────────────────────────────────────────
 
@@ -1822,6 +1723,14 @@ class VimEditor extends CustomEditor {
       return true;
     }
 
+    // ── / and ? are silently swallowed (no vim search) ──
+    if (data === "/" || data === "?") {
+      this.pendingOp = null;
+      this.syncState();
+      this.tuiRef.requestRender();
+      return true;
+    }
+
     // ── Normal commands ──
     return this.handleNormalCmd(data);
   }
@@ -1846,23 +1755,6 @@ class VimEditor extends CustomEditor {
   /** Handle a normal-mode command key. */
   private handleNormalCmd(data: string): boolean {
     const op = this.pendingOp;
-
-    // ── n/N: repeat search ──
-    if (data === "n" || data === "N") {
-      const count = this.consumeCount(1);
-      for (let i = 0; i < count; i++) this.repeatSearch(data === "N");
-      this.pendingOp = null;
-      this.syncState();
-      this.tuiRef.requestRender();
-      return true;
-    }
-
-    // ── * / #: search word under cursor ──
-    if (data === "*" || data === "#") {
-      this.pendingOp = null;
-      this.searchWordUnderCursor(data === "*" ? "/" : "?");
-      return true;
-    }
 
     // ── . repeat last change ──
     if (data === ".") {
@@ -2911,3 +2803,5 @@ export default function (pi: ExtensionAPI) {
     });
   });
 }
+
+export { VimEditor };
