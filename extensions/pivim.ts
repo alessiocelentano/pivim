@@ -162,7 +162,7 @@ class VimEditor extends CustomEditor {
   private static readonly DECSCUSR: Record<string, string> = {
     INSERT:  "\x1b[6 q",
     NORMAL:  "\x1b[2 q",
-    VISUAL:  "\x1b[4 q",
+    VISUAL:  "\x1b[2 q",
     COMMAND: "\x1b[6 q",
   };
 
@@ -2589,7 +2589,7 @@ class VimEditor extends CustomEditor {
       const startDoc = Math.min(this.visualStartLine, cur.line);
       const endDoc = Math.max(this.visualStartLine, cur.line);
 
-      const paddingX = this.getPaddingX();
+      const paddingX = getEditorPaddingX();
       const contentWidth = Math.max(1, width - 2 * paddingX);
       let visIdx = 0;
       const docToVis: Array<{ start: number; end: number }> = [];
@@ -2655,13 +2655,28 @@ class VimEditor extends CustomEditor {
         const hlEnd = Math.min(info.endCol, effEnd);
         if (hlStart >= hlEnd) return line;
 
-        return highlightLineRange(line, hlStart - info.startCol, hlEnd - info.startCol);
+        return highlightLineRange(line, paddingX + hlStart - info.startCol, paddingX + hlEnd - info.startCol);
       });
     }
 
     return lines;
   }
 
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pi editor padding helper
+// ─────────────────────────────────────────────────────────────
+
+/** Read editorPaddingX from Pi's settings.json directly. */
+function getEditorPaddingX(): number {
+  try {
+    const settingsPath = path.join(os.homedir(), '.pi', 'agent', 'settings.json');
+    const data = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    return data.editorPaddingX ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2684,7 +2699,7 @@ function highlightEntireLine(line: string): string {
   const trimmed = line.trimEnd();
   if (!trimmed) return line;
   const pad = visibleWidth(line) - visibleWidth(trimmed);
-  return `\x1b[7m${trimmed}\x1b[27m${' '.repeat(Math.max(0, pad))}`;
+  return `\x1b[7m${trimmed}\x1b[0m${' '.repeat(Math.max(0, pad))}`;
 }
 
 function highlightLineRange(line: string, startVisCol: number, endVisCol: number): string {
@@ -2719,7 +2734,7 @@ function highlightLineRange(line: string, startVisCol: number, endVisCol: number
     }
   }
 
-  result += '\x1b[27m';
+  result += '\x1b[0m';
   result += line.substring(i);
   return result;
 }
