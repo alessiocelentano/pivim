@@ -28,7 +28,7 @@
  */
 
 import { CustomEditor, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { matchesKey, visibleWidth, Key, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { matchesKey, visibleWidth, Key, wrapTextWithAnsi, truncateToWidth } from "@earendil-works/pi-tui";
 import type { TUI } from "@earendil-works/pi-tui";
 import * as fs from "fs";
 import * as path from "path";
@@ -2770,7 +2770,7 @@ export default function (pi: ExtensionAPI) {
 
         let bar = parts.join("");
         if (visibleWidth(bar) < w) bar += " ".repeat(w - visibleWidth(bar));
-        return [bar.slice(0, w)];
+        return [truncateToWidth(bar, w)];
       },
       invalidate() {},
     }), { placement: "belowEditor" });
